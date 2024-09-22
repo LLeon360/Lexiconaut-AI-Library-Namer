@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field
+import uuid
 
 class LibraryName(BaseModel):
     name: str
@@ -8,4 +9,5 @@ class LibraryName(BaseModel):
         populate_by_name = True
 
 class ResultItem(LibraryName):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4)
     starred: bool = False

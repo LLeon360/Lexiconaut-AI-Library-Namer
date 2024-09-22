@@ -9,6 +9,8 @@ from library_name_generator import LibraryName, generate_library_name
 from result_saver import ResultSaver
 from models import LibraryName, ResultItem
 
+import uuid 
+
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -60,33 +62,35 @@ async def generate_names_async(language: str, topic: str, purpose: str, number_o
     }
     results: List[LibraryName] = await generate_library_name(inputs)
     results = results[:number_of_names]
-    return [ResultItem(**result.model_dump(), starred=False) for result in results]
+    return [ResultItem(id=uuid.uuid4(), **result.model_dump(), starred=False) for result in results]
 
-def render_item(item: ResultItem, index: int, is_history: bool, result_saver: ResultSaver, app_state: AppState):
+def render_item(item: ResultItem, is_history: bool, result_saver: ResultSaver, app_state: AppState):
     col1, col2, col3, col4 = st.columns([3, 1, 1, 1])
     with col1:
         st.write(f"- {item.name}: {item.explanation}")
     with col2:
-        render_star_button(item, index, is_history, result_saver, app_state)
+        render_star_button(item, is_history, result_saver, app_state)
     with col3:
-        render_delete_button(item, index, is_history, result_saver, app_state)
+        render_delete_button(item, is_history, result_saver, app_state)
     with col4:
         st.write("⭐" if item.starred else "")
 
-def render_star_button(item: ResultItem, index: int, is_history: bool, result_saver: ResultSaver, app_state: AppState):
-    if st.button("Unstar" if item.starred else "Star", key=f"star_button_{index}"):
-        item.starred = not item.starred
+def render_star_button(item: ResultItem, is_history: bool, result_saver: ResultSaver, app_state: AppState):
+    if st.button("Unstar" if item.starred else "Star", key=f"star_button_{item.id}"):
         if is_history:
-            result_saver.save_results(app_state.get('history'))
+            result_saver.toggle_star(item.id)
+            app_state.set('history', result_saver.load_results())
+        else:
+            item.starred = not item.starred
         st.rerun()
 
-def render_delete_button(item: ResultItem, index: int, is_history: bool, result_saver: ResultSaver, app_state: AppState):
-    if st.button("Delete", key=f"delete_{index}"):
+def render_delete_button(item: ResultItem, is_history: bool, result_saver: ResultSaver, app_state: AppState):
+    if st.button("Delete", key=f"delete_{item.id}"):
         if is_history:
-            app_state.get('history').pop(index)
-            result_saver.save_results(app_state.get('history'))
+            result_saver.delete_result(item.id)
+            app_state.set('history', result_saver.load_results())
         else:
-            app_state.get('results').pop(index)
+            app_state.set('results', [r for r in app_state.get('results') if r.id != item.id])
         st.rerun()
 
 def render_save_button(result_saver: ResultSaver, default_path: str, app_state: AppState):
@@ -158,12 +162,12 @@ def main() -> None:
                 st.write("Starred Items:")
             else:
                 st.write("History:")
-            for i, item in enumerate(display_items):
-                render_item(item, i, True, result_saver, app_state)
+            for item in display_items:
+                render_item(item, True, result_saver, app_state)
         elif app_state.get('results'):
             st.write("Results generated successfully!")
-            for i, item in enumerate(app_state.get('results')):
-                render_item(item, i, False, result_saver, app_state)
+            for item in app_state.get('results'):
+                render_item(item, False, result_saver, app_state)
             render_save_button(result_saver, default_path, app_state)
 
     # Maintain scroll position
