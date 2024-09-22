@@ -14,9 +14,8 @@ class ResultSaver:
         try:
             with open(self.filename, 'r') as f:
                 data = json.load(f)
-                logger.debug(f"Data loaded from file: {data}")
                 return [ResultItem(**item) for item in data]
-        except (FileNotFoundError, json.JSONDecodeError):
+        except FileNotFoundError:
             return []
         
     def append_results(self, new_results: List[ResultItem]) -> None:
@@ -25,10 +24,8 @@ class ResultSaver:
         self.save_results(combined_results)
     
     def save_results(self, results: List[ResultItem]) -> None:
-        os.makedirs(os.path.dirname(self.filename), exist_ok=True)
-        
         with open(self.filename, 'w') as f:
-            json.dump([result.model_dump(by_alias=True) for result in results], f, indent=2)
+            json.dump([result.model_dump() for result in results], f, indent=2)
 
     def toggle_star(self, index: int) -> None:
         results = self.load_results()

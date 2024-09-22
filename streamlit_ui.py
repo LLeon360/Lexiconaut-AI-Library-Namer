@@ -20,8 +20,7 @@ class AppState:
                 'results': [],
                 'history': [],
                 'view_history': False,
-                'view_starred': False,
-                'star_states': {}
+                'view_starred': False
             }
         self.state = st.session_state.app_state
 
@@ -61,7 +60,7 @@ async def generate_names_async(language: str, topic: str, purpose: str, number_o
     }
     results: List[LibraryName] = await generate_library_name(inputs)
     results = results[:number_of_names]
-    return [ResultItem(name=result.name, explanation=result.explanation, starred=False) for result in results]
+    return [ResultItem(**result.model_dump(), starred=False) for result in results]
 
 def render_item(item: ResultItem, index: int, is_history: bool, result_saver: ResultSaver, app_state: AppState):
     col1, col2, col3, col4 = st.columns([3, 1, 1, 1])
@@ -72,16 +71,11 @@ def render_item(item: ResultItem, index: int, is_history: bool, result_saver: Re
     with col3:
         render_delete_button(item, index, is_history, result_saver, app_state)
     with col4:
-        st.write("⭐" if app_state.get('star_states').get(f"star_{index}", False) else "")
+        st.write("⭐" if item.starred else "")
 
 def render_star_button(item: ResultItem, index: int, is_history: bool, result_saver: ResultSaver, app_state: AppState):
-    key = f"star_{index}"
-    if key not in app_state.get('star_states'):
-        app_state.get('star_states')[key] = item.starred
-
-    if st.button("Star" if not app_state.get('star_states')[key] else "Unstar", key=f"star_button_{index}"):
-        app_state.get('star_states')[key] = not app_state.get('star_states')[key]
-        item.starred = app_state.get('star_states')[key]
+    if st.button("Unstar" if item.starred else "Star", key=f"star_button_{index}"):
+        item.starred = not item.starred
         if is_history:
             result_saver.save_results(app_state.get('history'))
         st.rerun()
@@ -106,6 +100,7 @@ def render_save_button(result_saver: ResultSaver, default_path: str, app_state: 
             st.success(f"Results saved to {default_path}")
             logger.debug(f"Results successfully saved to: {default_path}")
             app_state.set('results', [])
+            st.rerun()
         except Exception as e:
             logger.error(f"Error saving results: {str(e)}", exc_info=True)
             st.error(f"Error saving results: {str(e)}")
