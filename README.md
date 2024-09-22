@@ -1,4 +1,5 @@
-# Lexiconaut Library Name Generator
+# Lexiconaut 
+## AI Library Name Generator
 
 Tired of naming your web framework after your pet iguana? Can't decide which obscure jazz musician to honor next? Fear not! Our Library Name Generator is here to rescue you from the depths of naming despair.
 
