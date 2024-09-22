@@ -1,6 +1,6 @@
 import os
 import logging
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import asyncio
 import streamlit as st
@@ -51,18 +51,20 @@ def render_input_form():
     topic: str = st.text_input("Library Topic:")
     purpose: str = st.text_input("Library Purpose:")
     number_of_names: int = st.slider("Number of names to generate:", 1, 10, 5)
-    return language, topic, purpose, number_of_names
+    api_key: str = st.text_input("Google API Key (IF not in .env):", type="password")
+    return language, topic, purpose, number_of_names, api_key
 
-async def generate_names_async(language: str, topic: str, purpose: str, number_of_names: int):
+async def generate_names_async(language: str, topic: str, purpose: str, number_of_names: int, api_key: Optional[str] = None):
     inputs: Dict[str, str | int] = {
         'language': language,
         'topic': topic,
         'purpose': purpose,
         'number_of_names': number_of_names
     }
-    results: List[LibraryName] = await generate_library_name(inputs)
+    results: List[LibraryName] = await generate_library_name(inputs, api_key)
     results = results[:number_of_names]
     return [ResultItem(id=uuid.uuid4(), **result.model_dump(), starred=False) for result in results]
+
 
 def render_item(item: ResultItem, is_history: bool, result_saver: ResultSaver, app_state: AppState):
     col1, col2, col3, col4 = st.columns([3, 1, 1, 1])
@@ -122,7 +124,7 @@ def main() -> None:
         app_state.set('history', result_saver.load_results())
 
     # Input form
-    language, topic, purpose, number_of_names = render_input_form()
+    language, topic, purpose, number_of_names, api_key = render_input_form()
 
     # Action buttons
     col1, col2, col3 = st.columns(3)
@@ -139,7 +141,7 @@ def main() -> None:
     with main_container:
         if generate_button:
             with st.spinner("Generating names..."):
-                results = asyncio.run(generate_names_async(language, topic, purpose, number_of_names))
+                results = asyncio.run(generate_names_async(language, topic, purpose, number_of_names, api_key))
                 app_state.set('results', results)
                 app_state.set('view_history', False)
                 app_state.set('view_starred', False)

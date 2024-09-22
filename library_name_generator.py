@@ -1,19 +1,25 @@
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.prompts import PromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
 import random
 
 from models import LibraryName
 
+import os
+
 load_dotenv()
 
-async def generate_library_name(inputs: Dict[str, Any]) -> List[LibraryName]:
+async def generate_library_name(inputs: Dict[str, Any], api_key: Optional[str] = None) -> List[LibraryName]:
+    if api_key is None or api_key == "":
+        api_key = os.getenv("GOOGLE_API_KEY")
+        
     model: ChatGoogleGenerativeAI = ChatGoogleGenerativeAI(
         model="gemini-1.5-pro",
         temperature=0.7,
         max_tokens=100,
+        api_key=api_key,
     )
     
     # Add a random element to the prompt
